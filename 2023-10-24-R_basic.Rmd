@@ -1,7 +1,7 @@
 ---
 title: "Introduction to R"
 author: "Priit Adler"
-date: "2023-06-13"
+date: "2023-10-24"
 output: html_document
 ---
 
@@ -9,13 +9,25 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Introduction to Rstudio UI
+
+You can find this and the data files from ELIXIREstonia github. [`https://github.com/ELIXIREstonia/2023-10-24-R-basic`](https://github.com/ELIXIREstonia/2023-10-24-R-basic).
+
+RStudio is an integrated development environment (IDE) tailored for efficient and user-friendly R programming. Once launched, the RStudio UI presents itself in a segmented manner, primarily divided into four main panes.
+
+-   Text editor
+
+-   Console / Terminal / etc...
+
+-   Environment / History / Connections / Git
+
+-   Files / **Plots** / Packages / **Help** / etc...
+
 ## Introduction to R
 
 R is a popular open-source programming language and environment for statistical computing and graphics. In this section, we will cover basic R syntax, functions, data structures, and data manipulation using the tidyverse.
 
-You can find this and the data files from your Virtual Machine. `/media/penelopeCloud/Summer-School-June2023/R_and_ggplot2/data`.
-
-**DO NOT WORK IN THE PENELOPECLOUD, COPY FILES TO YOUR OWN VM FIRST!!!!**
+You can find this and the data files from ELIXIREstonia github. `https://github.com/ELIXIREstonia/2023-10-24-R-basic`.
 
 ### R Syntax and Basic Functions
 
@@ -90,17 +102,13 @@ Each data structure has its strengths and applications, and choosing the right o
 ## Loading the Tidyverse and ggplot2
 
 ```{r message=FALSE}
-# Install tidyverse and ggplot2 if not already installed
+# Install tidyverse if not already installed
 if (!requireNamespace("tidyverse", quietly = TRUE)) {
   install.packages("tidyverse")
 }
-if (!requireNamespace("ggplot2", quietly = TRUE)) {
-  install.packages("ggplot2")
-}
 
-# Load the tidyverse and ggplot2
+# Load the tidyverse
 library(tidyverse)
-library(ggplot2)
 ```
 
 ## Reading Data from a File
@@ -206,70 +214,29 @@ data %>% group_by(Drug, Dosage) %>% summarise(mean_diff = mean(Diff),
 
 ```
 
-# Running DESEQ2 analysis
+# About the data
 
-*"A basic task in the analysis of count data from RNA-seq is the detection of differentially expressed genes. The count data are presented as a table which reports, for each sample, the number of sequence fragments that have been assigned to each gene. Analogous data also arise for other assay types, including comparative ChIP-Seq, HiC, shRNA screening, and mass spectrometry. An important analysis question is the quantification and statistical inference of systematic changes between conditions, as compared to within-condition variability. The package DESeq2 provides methods to test for differential expression by use of negative binomial generalized linear models."*
-
--   [DESeq2 reference manual](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html)
-
-First we need to read in the data. You can find the data files from your Virtual Machine. `/media/penelopeCloud/Summer-School-June2023/R_and_ggplot2/data`.
-
-**DO NOT WORK IN THE PENELOPECLOUD, COPY FILES TO YOUR OWN VM FIRST!!!!**
-
-The data is from [ArrayExpress](https://www.ebi.ac.uk/biostudies/arrayexpress/studies/E-MTAB-11742). For the easy of this lesson I have stripped some extra from metadata and prepared expression data as single file.
+In examples we'll be using a [Kaggle](https://www.kaggle.com/datasets/steveahn/memory-test-on-drugged-islanders-data?resource=download) "**Memory Test on Drugged Islanders Data**" dataset.
 
 Dataset description
 
-:   We carried out RNA-seq of cerebellar tissues of control and prion-inoculated BL6 mice at two time points: 56 days post-inoculation (early disease) and 182 days post-inoculation (terminal disease).
+:   An experiment on the effects of anti-anxiety medicine on memory recall when being primed with happy or sad memories. The participants were done on novel Islanders whom mimic real-life humans in response to external factors.
+
+    Drugs of interest (known-as) [Dosage 1, 2, 3]:
+
+    A - Alprazolam (Xanax, Long-term) [1mg/3mg/5mg]
+
+    T - Triazolam (Halcion, Short-term) [0.25mg/0.5mg/0.75mg]
+
+    S- Sugar Tablet (Placebo) [1 tab/2tabs/3tabs]
+
+The easiest way to read in the data is to use `read_csv` command:
 
 ```{r}
-metadata <- read.table('data/E-MTAB-11742/metadata.tsv', sep='\t', header = TRUE)
-head(metadata)
-
-expdata <- read.table('data/E-MTAB-11742/expdata.tsv', sep='\t')
-head(expdata)
-
+Isd <- read_csv('data/Islander_data.csv')
 ```
 
-To prepare for DESeq2 analysis, we need to first install it. (It might be, that you need to install also quite a few [Bioconductor](https://bioconductor.org/) packages.) The examples where follow examples from [DESeq2 vignette](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html), but there are many more use-cases described in the documentation. If you plan differential expression RNA-seq analysis, be sure to consult with it.
-
-```{r message=FALSE}
-if (!requireNamespace("BiocManager", quietly = TRUE)) {
-  install.packages("BiocManager")
-}
-if (!requireNamespace("DESeq2", quietly = TRUE)) {
-  BiocManager::install("DESeq2")
-}
-library(DESeq2)
-```
-
-```{r}
-# to prepare the data we need to construct DESeqDataSet
-dds <- DESeqDataSetFromMatrix(countData = expdata,
-                              colData = metadata,
-                              design = ~ disease)
-dds
-```
-
-*"While it is not necessary to pre-filter low count genes before running the DESeq2 functions, there are **two** reasons which make pre-filtering useful: by removing rows in which there are very few reads, we reduce the memory size of the `dds` data object, and we increase the speed of the transformation and testing functions within DESeq2. It can also improve visualizations, as features with no information for differential expression are not plotted."*
-
-```{r}
-# suggested filter according to DESeq2 manual
-keep <- rowSums(counts(dds)) >= 10
-dds <- dds[keep,]
-
-# another popular filter according to DESeq2 manual
-keep <- rowSums(counts(dds) >= 10) >= 4
-dds <- dds[keep,]
-```
-
-If everything is prepared, running the analysis is straight-forward. `summary` of results will give us quick overview of found interesting hits.
-
-```{r}
-dds <- DESeq(dds)
-res <- results(dds, pAdjustMethod = 'BH')
-summary(res)
-```
+### 
 
 # Plotting with ggplot2
 
@@ -585,7 +552,6 @@ Refactoring involves changing the levels of a factor variable. You can use the `
 
 ```{r}
 # Load the required packages
-# library(forcats)
 
 # # Recode the Drug variable
 Isd_refactored <- Isd %>%
@@ -604,7 +570,7 @@ In this example, we refactored the `Drug` variable by changing the levels from l
 Reordering involves changing the order of the levels of a factor variable. You can use the `fct_reorder()` function to reorder the levels of a factor based on the values of another variable.
 
 ```{r}
-# Create a new column with reordered genre based on the median intgross
+# Create a new column with reordered drug labels based on median test difference.
 Isd_reordered <- Isd_refactored %>%
   mutate(Drug_reordered = fct_reorder(Drug_name, Diff, .fun = median, .desc = TRUE))
 
